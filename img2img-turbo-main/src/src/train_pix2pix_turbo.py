@@ -7,6 +7,7 @@ import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
 import transformers
+import glob
 from accelerate import Accelerator
 from accelerate.utils import set_seed
 from PIL import Image
@@ -22,6 +23,14 @@ from cleanfid.fid import get_folder_features, build_feature_extractor, fid_from_
 
 from pix2pix_turbo import Pix2Pix_Turbo
 from my_utils.training_utils import parse_args_paired_training, PairedDataset
+
+
+def find_latest_checkpoint(checkpoint_dir):
+    checkpoints = glob.glob(os.path.join(checkpoint_dir,"*.weights.pkl"))
+    if not checkpoints:
+        return None
+    checkpoints = sorted(checkpoints, key=lambda x:int(os.path.basename(x).split('_')[1].split('.')[0]))
+    return checkpoints[-1]
 
 
 def main(args):
@@ -161,11 +170,42 @@ def main(args):
         ref_stats = get_folder_features(os.path.join(args.dataset_folder, "test_B"), model=feat_model, num_workers=0, num=None,
                 shuffle=False, seed=0, batch_size=8, device=torch.device("cuda"),
                 mode="clean", custom_image_tranform=fn_transform, description="", verbose=True)
+    
+    # 尝试加载checkpoint
+    checkpoint_dir = os.path.join(args.output_dir, "checkpoints")
+    latest_checkpoint = find_latest_checkpoint(checkpoint_dir)
+    start_step = 0
+    start_epoch = 0
+
+    if latest_checkpoint is not None:
+        print(f"checkpoint: {latest_checkpoint}")
+        checkpoint_path = latest_checkpoint
+        training_state_path = checkpoint_path.replace(".weights.pkl", ".training_state.pkl")
+
+        # 加载模型权重（使用你自定义的 load_model）
+        accelerator.unwrap_model(net_pix2pix).load_model(checkpoint_path)
+
+        # 加载训练状态
+        if os.path.exists(training_state_path):
+            training_state = torch.load(training_state_path, map_location="cpu")
+            optimizer.load_state_dict(training_state["optimizer"])
+            optimizer_disc.load_state_dict(training_state["optimizer_disc"])
+            lr_scheduler.load_state_dict(training_state["lr_scheduler"])
+            lr_scheduler_disc.load_state_dict(training_state["lr_scheduler_disc"])
+            start_step = training_state["global_step"]
+            start_epoch = training_state.get("epoch", 0)
+        else:
+            print("未找到训练状态文件，仅加载模型权重")
 
     # start the training loop
-    global_step = 0
-    for epoch in range(0, args.num_training_epochs):
+    global_step = start_step
+    progress_bar.update(start_step)
+    
+    for epoch in range(start_step, args.num_training_epochs):
         for step, batch in enumerate(dl_train):
+            if global_step < start_step:
+                global_step += 1
+                continue
             l_acc = [net_pix2pix, net_disc]
             with accelerator.accumulate(*l_acc):
                 x_src = batch["conditioning_pixel_values"]
@@ -253,7 +293,21 @@ def main(args):
                     # checkpoint the model
                     if global_step % args.checkpointing_steps == 1:
                         outf = os.path.join(args.output_dir, "checkpoints", f"model_{global_step}.pkl")
-                        accelerator.unwrap_model(net_pix2pix).save_model(outf)
+                        accelerator.wait_for_everyone()
+                        unwrapped_model = accelerator.unwrap_model(net_pix2pix)
+
+                        # 使用模型自带的 save_model 保存 LoRA 权重
+                        unwrapped_model.save_model(outf + ".weights.pkl")  # 保存模型权重
+
+                        # 额外保存训练状态和优化器
+                        torch.save({
+                            "optimizer": optimizer.state_dict(),
+                            "optimizer_disc": optimizer_disc.state_dict(),
+                            "lr_scheduler": lr_scheduler.state_dict(),
+                            "lr_scheduler_disc": lr_scheduler_disc.state_dict(),
+                            "global_step": global_step,
+                            "epoch": epoch,
+                        }, outf + ".training_state.pkl")
 
                     # compute validation set FID, L2, LPIPS, CLIP-SIM
                     if global_step % args.eval_freq == 1:

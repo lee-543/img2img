@@ -1,0 +1,57 @@
+nohup: ignoring input
+/home/shenchengkang/.conda/envs/myenv/bin/python3.10: can't open file '/home/shenchengkang/img/img2img-turbo-main/src/src/train_pix2pix_turbo.py': [Errno 2] No such file or directory
+/home/shenchengkang/.conda/envs/myenv/bin/python3.10: can't open file '/home/shenchengkang/img/img2img-turbo-main/src/src/train_pix2pix_turbo.py': [Errno 2] No such file or directory
+/home/shenchengkang/.conda/envs/myenv/bin/python3.10: can't open file '/home/shenchengkang/img/img2img-turbo-main/src/src/train_pix2pix_turbo.py': [Errno 2] No such file or directory
+/home/shenchengkang/.conda/envs/myenv/bin/python3.10: can't open file '/home/shenchengkang/img/img2img-turbo-main/src/src/train_pix2pix_turbo.py': [Errno 2] No such file or directory
+E0922 15:09:16.385855 2149741 site-packages/torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 2) local_rank: 0 (pid: 2149821) of binary: /home/shenchengkang/.conda/envs/myenv/bin/python3.10
+Traceback (most recent call last):
+  File "/home/shenchengkang/.conda/envs/myenv/bin/accelerate", line 7, in <module>
+    sys.exit(main())
+  File "/home/shenchengkang/.conda/envs/myenv/lib/python3.10/site-packages/accelerate/commands/accelerate_cli.py", line 50, in main
+    args.func(args)
+  File "/home/shenchengkang/.conda/envs/myenv/lib/python3.10/site-packages/accelerate/commands/launch.py", line 1226, in launch_command
+    multi_gpu_launcher(args)
+  File "/home/shenchengkang/.conda/envs/myenv/lib/python3.10/site-packages/accelerate/commands/launch.py", line 853, in multi_gpu_launcher
+    distrib_run.run(args)
+  File "/home/shenchengkang/.conda/envs/myenv/lib/python3.10/site-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/home/shenchengkang/.conda/envs/myenv/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/shenchengkang/.conda/envs/myenv/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+src/train_pix2pix_turbo.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2025-09-22_15:09:16
+  host      : 4090D
+  rank      : 1 (local_rank: 1)
+  exitcode  : 2 (pid: 2149822)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2025-09-22_15:09:16
+  host      : 4090D
+  rank      : 2 (local_rank: 2)
+  exitcode  : 2 (pid: 2149823)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[3]:
+  time      : 2025-09-22_15:09:16
+  host      : 4090D
+  rank      : 3 (local_rank: 3)
+  exitcode  : 2 (pid: 2149824)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-09-22_15:09:16
+  host      : 4090D
+  rank      : 0 (local_rank: 0)
+  exitcode  : 2 (pid: 2149821)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
